@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -6,6 +6,19 @@ const MapComponent = ({ stations }) => {
   const [userLocation, setUserLocation] = useState(null);
   const [nearestStation, setNearestStation] = useState(null);
   const [stationsWithinRadius, setStationsWithinRadius] = useState([]);
+  const deg2rad = useCallback((deg) => deg * (Math.PI / 180), []);
+  const getDistanceFromLatLonInKm = useCallback((lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in km
+  }, [deg2rad]); // Add deg2rad as a dependency
+
 
   useEffect(() => {
     const findNearestStationAndFilter = (lat, lon) => {
@@ -37,21 +50,10 @@ const MapComponent = ({ stations }) => {
       console.error(err);
       setUserLocation({ latitude: 17.396910, longitude: 78.490368 });
     });
-  }, [stations]); // Add stations as a dependency
+  }, [stations, getDistanceFromLatLonInKm]); // Add stations as a dependency
 
-  const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // Radius of the earth in km
-    const dLat = deg2rad(lat2 - lat1);
-    const dLon = deg2rad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Distance in km
-  };
+ 
 
-  const deg2rad = (deg) => deg * (Math.PI / 180);
 
   return (
     <MapContainer center={userLocation ? [userLocation.latitude, userLocation.longitude] : [17.396910, 78.490368]} zoom={13} style={{ height: '100vh', width: '100%' }}>

@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const app = express();
 const cors = require('cors');
+const authRoutes = require('./routes/authRoutes');
 
 
 app.use(cors());
@@ -18,10 +19,12 @@ const stationSchema = new mongoose.Schema({
   name: String,
   latitude: Number,
   longitude: Number,
-  charge: String
+  charge: String,
+  username: String
 });
 
 const Station = mongoose.model('Station', stationSchema);
+app.use('/api', authRoutes);
 
 // Create a station
 app.post('/stations', async (req, res) => {
@@ -29,7 +32,8 @@ app.post('/stations', async (req, res) => {
     name: req.body.name,
     latitude: req.body.latitude,
     longitude: req.body.longitude,
-    charge: req.body.charge
+    charge: req.body.charge,
+    username: req.body.username // Include username
   });
 
   try {
@@ -43,7 +47,14 @@ app.post('/stations', async (req, res) => {
 // Get all stations
 app.get('/stations', async (req, res) => {
   try {
-    const stations = await Station.find();
+    // Extract username from query parameters
+    const username = req.query.username;
+    let query = {};
+    if (username) {
+      query.username = username; // Filter by username if it's provided
+    }
+
+    const stations = await Station.find(query);
     res.json(stations);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -63,23 +74,20 @@ app.get('/stations/:id', async (req, res) => {
 
 // Update a station
 app.put('/stations/:id', async (req, res) => {
-  let station;
   try {
-    station = await Station.findById(req.params.id);
+    const station = await Station.findById(req.params.id);
     if (!station) return res.status(404).json({ message: 'Cannot find station' });
 
-    if (req.body.name != null) {
-      station.name = req.body.name;
+    // Check if the username matches
+    if (station.username !== req.body.username) {
+      return res.status(403).json({ message: 'Unauthorized to update this station' });
     }
-    if (req.body.latitude != null) {
-      station.latitude = req.body.latitude;
-    }
-    if (req.body.longitude != null) {
-      station.longitude = req.body.longitude;
-    }
-    if (req.body.charge != null) {
-      station.charge = req.body.charge;
-    }
+
+    // Update fields
+    station.name = req.body.name ?? station.name;
+    station.latitude = req.body.latitude ?? station.latitude;
+    station.longitude = req.body.longitude ?? station.longitude;
+    station.charge = req.body.charge ?? station.charge;
 
     const updatedStation = await station.save();
     res.json(updatedStation);
@@ -87,6 +95,7 @@ app.put('/stations/:id', async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 });
+
 
 // Delete a station
 // app.delete('/stations/:id', async (req, res) => {
@@ -101,18 +110,30 @@ app.put('/stations/:id', async (req, res) => {
 //   }
 // });
 //by name
-app.delete('/stations/name/:name', async (req, res) => {
+app.delete('/stations/:id', async (req, res) => {
   try {
-    const result = await Station.findOneAndDelete({ name: req.params.name });
-    if (!result) {
+    console.log("Request to delete station with ID:", req.params.id);
+    console.log("Request body:", req.body);
+
+    const station = await Station.findById(req.params.id);
+    if (!station) {
+      console.log("Station not found");
       return res.status(404).json({ message: 'Cannot find station' });
     }
+
+    if (station.username !== req.body.username) {
+      console.log("Unauthorized attempt to delete station");
+      return res.status(403).json({ message: 'Unauthorized to delete this station' });
+    }
+
+    await station.remove();
     res.json({ message: 'Deleted Station' });
   } catch (err) {
-    console.error(err); // Log the error for debugging
-    res.status(500).json({ message: 'Internal Server Error' });
+    console.error('Server error:', err); // Log the detailed error
+    res.status(500).json({ message: err.message });
   }
 });
 
-const port = process.env.PORT || 3000;
+
+const port = process.env.PORT || 5000;
 app.listen(port, () => console.log(`Server running on port ${port}`));

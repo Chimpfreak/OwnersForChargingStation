@@ -1,27 +1,28 @@
 // StationsList.js
 import React from 'react';
 import axios from 'axios';
+import { useAuth } from './AuthContent';
 
 const StationsList = ({ stations, onEdit, onDelete }) => {
   // Handle station deletion
-  const handleDelete = async (station) => {
+  const { username } = useAuth();
+  const handleDelete = async (stationId) => {
     try {
-      if (station) {
-        const stationName = station.name;
-        if (stationName) {
-          const response = await axios.delete(`http://localhost:3000/stations/name/${encodeURIComponent(stationName)}`);
-          console.log(response.data); // Log the response for debugging
-          onDelete(stationName);
-        } else {
-          console.error('Invalid station object: Missing name property');
-        }
-      } else {
-        console.error('Invalid station object: Undefined');
+      if (!username) {
+        console.error('User is not logged in');
+        return;
       }
+  
+      const response = await axios.delete(`http://localhost:5000/stations/${stationId}`, {
+        data: { username: username }
+      });
+      console.log(response.data);
+      onDelete(stationId);
     } catch (error) {
       console.error('Error deleting station', error);
     }
   };
+  
 
   // Handle station edit
   const handleEdit = (station) => {

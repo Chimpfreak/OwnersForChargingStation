@@ -26,15 +26,14 @@ function App() {
   const [stations, setStations] = useState([]);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/stations')
+    axios.get(`http://localhost:5000/stations`)
       .then(response => {
         setStations(response.data);
       })
       .catch(error => {
         console.error('There was an error fetching the stations', error);
       });
-  }, []);
-
+  }, []); 
   return (
     <AuthProvider> {/* Wrap your app with AuthProvider */}
       <Router>

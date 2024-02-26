@@ -26,7 +26,7 @@ const Login = () => {
       });
   
       if (response.ok) {
-        login();
+        login(username);
         navigate('/'); // Navigate to the Dashboard upon successful login
       } else {
         alert('Login failed!');
